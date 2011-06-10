@@ -174,7 +174,7 @@
   (Thread/sleep 1700)
   (println "FRANK: Here's the rundown...")
   ;; (println (apply str (interpose "\n" dolls)))
-  (dorun (for [i (-> dolls count dec range)] 
+  (dorun (for [i (-> dolls count range)] 
                 (let [{wi :weight vi :value} (get dolls i)]
                       (print (format "\ta doll that weighs %sg, worth $%s,\n" wi vi))
                 )

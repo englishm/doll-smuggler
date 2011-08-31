@@ -1,3 +1,3 @@
 #!/bin/sh
-java -cp clojure.jar:clojure-contrib-1.2.0.jar clojure.main doll-smuggler.clj
+java -jar doll_smuggler-1.0.0-SNAPSHOT-standalone.jar
 

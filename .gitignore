@@ -1,3 +1,6 @@
-clojure.jar
-clojure-contrib-1.2.0.jar
-
+pom.xml
+*jar
+/lib/
+/classes/
+.lein-failures
+.lein-deps-sum

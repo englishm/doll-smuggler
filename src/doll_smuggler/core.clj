@@ -1,33 +1,12 @@
-;; Solution to Doll Smuggler programming challenge
+;; Dynamic Programming Solution to Doll Smuggler Programming Challenge
 ;;
 ;; Copyright (c) 2011 Mike English
 ;;
-;; Permission is hereby granted, free of charge, to any person obtaining
-;; a copy of this software and associated documentation files (the 
-;; "Software"), to deal in the Software without restriction, including 
-;; without limitation the rights to use, copy, modify, merge, publish, 
-;; distribute, sublicense, and/or sell copies of the Software, and to 
-;; permit persons to whom the Software is furnished to do so, subject 
-;; to the following conditions:
-;;
-;; The above copyright notice and this permission notice shall be 
-;; included in all copies or substantial portions of the Software.
-;;
-;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
-;; EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
-;; MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
-;; NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
-;; BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
-;; ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
-;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
-;; SOFTWARE.
 
-;;(use 'clojure.contrib.trace) ;; Debugging lifesaver!
-;; make sure the clojure-contrib jar is in your cp to use
-;; try using dotrace on pack-dolls & memoized-pack-dolls
+(ns doll_smuggler.core
+  (:gen-class) )
 
-;; The maximum weight the nice old lady can carry (in grams)
-(ns doll-smuggler)
+;; The default maximum weight the nice old lady can carry (in grams)
 (def max-weight 8000)
 
 (defstruct doll :weight :value)
@@ -45,11 +24,10 @@
   (vec (for [x (range n)] (stuff-doll)))
 )
 
-(declare dolls)
-
 (declare memoized-pack-dolls) ;; defined below
+;; this declaration is necessary because pack-dolls recurs, calling memoized-pack-dolls
 
-(defn pack-dolls [i W]
+(defn pack-dolls [dolls i W]
   "Based on algo at http://en.wikipedia.org/wiki/Knapsack_problem#0-1_knapsack_problem"
   (if (or (< i 0) (= W 0)) ;; i is an index, W is max avail. weight 
     [0 []] ;; if true: return value 0 and empty set of indices
@@ -61,7 +39,7 @@
     (let [{wi :weight vi :value } (get dolls i)]
       (if (> wi W) ;; weight of doll at i is > available weight to add
 
-        (#'memoized-pack-dolls (dec i) W) ;; recur w/ i-- (~ don't pack this doll)
+        (#'memoized-pack-dolls dolls (dec i) W) ;; recur w/ i-- (~ don't pack this doll)
         
         ;; else: 
         ;; (wi is less than or equal to amount of weight than can be added)
@@ -74,11 +52,11 @@
 
           ;; bind locally the value of not packing doll i
           ;; and the optimal set of indices returned by recurring
-          [[v-notpacking set-notpacking] (#'memoized-pack-dolls (dec i) W)
+          [[v-notpacking set-notpacking] (#'memoized-pack-dolls dolls (dec i) W)
 
            ;; bind locally the value of packing doll i
            ;; cont. below
-           [v-packing set-packing] (#'memoized-pack-dolls (dec i) (- W wi))]
+           [v-packing set-packing] (#'memoized-pack-dolls dolls (dec i) (- W wi))]
           ;; body of let block
 
           ;; adding vi and i in the body for readability
@@ -111,6 +89,8 @@
 ;; store the results for each unique call so they
 ;; don't need to be calculated more than once
 ;; - saves many levels of brancing and recurring
+;; - saves time at the cost of space
+;; - reduces complexity
 (def memoized-pack-dolls (memoize pack-dolls))
 
 
@@ -118,14 +98,6 @@
   "Parse a string to an Integer, catching exceptions"
   (try (Integer/parseInt x)
     (catch NumberFormatException e 0))
-)
-
-(defn timer [myfunc]
-  "Time a function, returning the time it takes to run in ms."
-  (let [start# (. System (nanoTime))
-          junk ~myfunc]
-      (/ (double (- (. System (nanoTime)) start#)) 1000000.0)
-  )
 )
 
 (defn run-story []
@@ -173,7 +145,6 @@
   (println "ARTURO: OK. Sticker prices?")
   (Thread/sleep 1700)
   (println "FRANK: Here's the rundown...")
-  ;; (println (apply str (interpose "\n" dolls)))
   (dorun (for [i (-> dolls count range)] 
                 (let [{wi :weight vi :value} (get dolls i)]
                       (print (format "\ta doll that weighs %sg, worth $%s,\n" wi vi))
@@ -200,13 +171,8 @@
   (Thread/sleep 500)
   (println "        What's the best we can load her up with?")
   (Thread/sleep 1200)
-  ;; TODO estimate solution time base on predictable algo
-  (def time-est 2)
-  (println "KLAAS: Give me " time-est "seconds and I'll tell you.")
-  ;; TODO custom func 'timer' returns s of time to run inner
-  ;;(def klaas-time 
-    ;;(timer
-        (let [[best-value best-set] (pack-dolls (dec (count dolls)) max-weight)]
+  (println "KLAAS: Hold your horses and I'll tell you.")
+        (let [[best-value best-set] (pack-dolls dolls (dec (count dolls)) max-weight)]
           (println "KLAAS: We'll pack:")
           (apply print 
               (for [i best-set] 
@@ -218,14 +184,12 @@
           (print "\n\tand that's the best we can fit-\n")
           (println "\t" (count best-set) "dolls for a value of" (format "$%s" best-value))   
         )
-  ;;  )
-  ;;)
   (println "ARTURO: Thanks, Klaas!") 
-  ;;(println "ARTURO: (it actually took you " klaas-time "s, by the way.")
-  ;;(if (< klaas-time time-est)
-  ;;  (println "ARTURO: Good work!")
-  ;;  (println "ARTURO: Slow poke!")
-  ;;)
+)
+
+(defn -main [& args]
+  (println "DOLL SMUGGLER")
+  (run-story)
 )
 
 ;; mocks
@@ -233,28 +197,28 @@
 (defn mock-shipment []
  "Mock shipment fn w/ known solution"
   ;; 1030 [0 1 2 3 4 6 10 15 16 17 18 20]
-  [(struct doll 9 150)    ;; 0  "map"
-   (struct doll 13 35)    ;; 1  "compass
-   (struct doll 153 200)  ;; 2  "water"
-   (struct doll 50 160)   ;; 3  "sandwich"
-   (struct doll 15 60)    ;; 4  "glucose"
-   (struct doll 68 45)    ;; 5  "tin"
-   (struct doll 27 60)    ;; 6  "banana"
-   (struct doll 39 40)    ;; 7  "apple"
-   (struct doll 23 30)    ;; 8  "cheese"
-   (struct doll 52 10)    ;; 9  "beer"
-   (struct doll 11 70)    ;; 10 "suntan cream"
-   (struct doll 32 30)    ;; 11 "camera"
-   (struct doll 24 15)    ;; 12 "t-shirt"
-   (struct doll 48 10)    ;; 13 "trousers"
-   (struct doll 73 40)    ;; 14 "umbrella"
-   (struct doll 42 70)    ;; 15 "waterproof trousers"
-   (struct doll 43 75)    ;; 16 "waterproof overclothes"
-   (struct doll 22 80)    ;; 17 "note-case"
-   (struct doll 7 20)     ;; 18 "sunglasses"
-   (struct doll 18 12)    ;; 19 "towel"
-   (struct doll 4 50)     ;; 20 "socks"
-   (struct doll 30 10)]   ;; 21 "book"
+  [(struct doll 9 150)   
+   (struct doll 13 35)   
+   (struct doll 153 200) 
+   (struct doll 50 160)  
+   (struct doll 15 60)   
+   (struct doll 68 45)   
+   (struct doll 27 60)   
+   (struct doll 39 40)   
+   (struct doll 23 30)   
+   (struct doll 52 10)   
+   (struct doll 11 70)   
+   (struct doll 32 30)   
+   (struct doll 24 15)   
+   (struct doll 48 10)   
+   (struct doll 73 40)   
+   (struct doll 42 70)   
+   (struct doll 43 75)   
+   (struct doll 22 80)    
+   (struct doll 7 20)     
+   (struct doll 18 12)    
+   (struct doll 4 50)     
+   (struct doll 30 10)]   
 )
 
 ;; Some general tests
@@ -318,8 +282,4 @@
         ;; mhm
       )
 )  
-
-;; Make it so!
-(mytests)
-(run-story)
 

@@ -1,6 +1,6 @@
 # Doll Smuggler
 
-A solution to Atomic Object's Doll Smuggler programming challenge using dynamic programming.
+A solution to Atomic Object's Doll Smuggler programming challenge using memoization.
 
 ## Challenge
 _originally posted on the [Atomic Spin blog](http://spin.atomicobject.com/2011/05/31/use-clojure-to-move-drugs-a-programming-challenge/ "Use Clojure to Move Drugs – A Programming Challenge")_
